@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: reactive-programming-module-5
+  r2dbc:
+    isCreateTable: true
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+#  jpa:
+#    properties:
+#      hibernate:
+#        dialect: org.hibernate.dialect.PostgreSQLDialect
+#    hibernate:
+#      ddl-auto: create-drop
+#    show-sql: 'true'
+
+webservice:
+  application:
+    id: 1021811475102600396
+server:
+  port: 8080
+
+#logging:
+#  level:
+#    io.r2dbc: DEBUG
+
