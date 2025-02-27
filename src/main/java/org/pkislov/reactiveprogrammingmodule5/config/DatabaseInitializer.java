@@ -1,15 +1,24 @@
 package org.pkislov.reactiveprogrammingmodule5.config;
 
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.r2dbc.spi.ConnectionFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.pkislov.reactiveprogrammingmodule5.service.ItemService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.r2dbc.core.DatabaseClient;
 import reactor.core.publisher.Mono;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Configuration
@@ -20,11 +29,22 @@ class DatabaseInitializer {
     private Boolean isCreateTable;
 
     private final ConnectionFactory connectionFactory;
+    private final ResourceLoader resourceLoader;
+    private final ObjectMapper objectMapper;
+    private final ItemService itemService;
 
     @EventListener(ApplicationReadyEvent.class)
     public void handleContextRefresh() {
         if (isCreateTable) {
+            log.info("Creating table");
             createTable().block();
+            itemService.createItems(loadItems())
+                    .onErrorResume(e -> {
+                        log.error("Error while creating items: {}", e.getMessage());
+                        return Mono.empty();
+                    })
+                    .subscribe( item -> log.info("Item created: {}", item));
+        log.info("Items created");
         }
     }
 
@@ -35,5 +55,15 @@ class DatabaseInitializer {
                 .fetch()
                 .rowsUpdated()
                 .then();
+    }
+
+    public List<String> loadItems() {
+        Resource resource = resourceLoader.getResource("classpath:items.json");
+        try (InputStream inputStream = resource.getInputStream()) {
+            Map<String, List<String>> data = objectMapper.readValue(inputStream, Map.class);
+            return data.get("items");
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

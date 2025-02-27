@@ -10,6 +10,8 @@ import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -24,9 +26,16 @@ public class ItemService {
     }
 
     @Transactional
-    public Flux<Item> getItems() {
-        return itemRepository.findAll()
-                .doOnRequest(request -> log.info("Request: {}", request))
-                .doOnNext(item -> log.info("Item: {}", item));
+    public Mono<Item> findItem(String name) {
+        return itemRepository.findByName(name);
     }
+
+    @Transactional
+    public Flux<Item> createItems(List<String> names) {
+        List<Item> items = names.stream()
+                .map(Item::new)
+                .toList();
+        return itemRepository.saveAll(items);
+    }
+
 }
