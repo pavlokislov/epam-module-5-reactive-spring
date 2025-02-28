@@ -13,6 +13,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.r2dbc.core.DatabaseClient;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.io.IOException;
@@ -38,13 +39,14 @@ class DatabaseInitializer {
         if (isCreateTable) {
             log.info("Creating table");
             createTable().block();
-            itemService.createItems(loadItems())
-                    .onErrorResume(e -> {
-                        log.error("Error while creating items: {}", e.getMessage());
-                        return Mono.empty();
-                    })
-                    .subscribe( item -> log.info("Item created: {}", item));
-        log.info("Items created");
+            Flux.fromIterable(loadItems())
+                    .log()
+                    .limitRate(20, 0)
+                    .doOnComplete(() -> log.info("Items populated"))
+                    .doOnError(e -> log.error("Items populated failed %s", e))
+                    .map(itemService::createItem)
+                    .subscribe(item -> log.info("Item created: {}", item));
+            log.info("Items created");
         }
     }
 
